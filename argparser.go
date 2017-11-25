@@ -2,6 +2,7 @@ package argparser
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -61,7 +62,12 @@ func parseConfig(config interface{}) (interface{}, error) {
 }
 
 func generateConfig(config interface{}) error {
-	file, err := os.OpenFile(*name, os.O_RDWR|os.O_CREATE, 0755)
+	_, err := os.Lstat(*name)
+	if !os.IsNotExist(err) {
+		return errors.New("File already exist")
+	}
+
+	file, err := os.Create(*name)
 	if err != nil {
 		return err
 	}
