@@ -7,46 +7,71 @@ import (
 	"os"
 )
 
-type Parser struct {
-	Config     interface{}
-	Name       *string
-	isGenerate *bool
+var (
+	generate *bool
+	name     *string
+)
+
+func addCommonFlags() {
+	generate = flag.Bool("generate", false, "Generating default config")
+	name = flag.String("config", "config.json", "Config name")
 }
 
-func (p *Parser) addCommonFlags() {
-	p.isGenerate = flag.Bool("generate", false, "Generating default config")
-	p.Name = flag.String("config", "config.log", "Config name")
+func String(name string, value string, usage string) *string {
+	return flag.String(name, value, usage)
 }
 
-func (p *Parser) parseConfig() error {
-	file, err := os.Open(*p.Name)
+func Bool(name string, value bool, usage string) *bool {
+	return flag.Bool(name, value, usage)
+}
+
+func Int(name string, value int, usage string) *int {
+	return flag.Int(name, value, usage)
+}
+
+func parseConfig(config interface{}) (interface{}, error) {
+	file, err := os.Open(*name)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return config, nil
 		}
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
 	bytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(bytes, p.Config)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *Parser) Parse() (interface{}, error) {
-	p.addCommonFlags()
-	flag.Parse()
-	if err := p.parseConfig(); err != nil {
 		return nil, err
 	}
 
-	return p.Config, nil
+	err = json.Unmarshal(bytes, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+func generateConfig(config interface{}) error {
+	file, err := os.OpenFile(*name, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	enc := json.NewEncoder(file)
+	return enc.Encode(config)
+}
+
+func Parse(config interface{}) (interface{}, error, bool) {
+	addCommonFlags()
+	flag.Parse()
+
+	if *generate {
+		err := generateConfig(config)
+		return config, err, true
+	}
+
+	config, err := parseConfig(config)
+	return config, err, false
 }
