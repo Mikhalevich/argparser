@@ -12,6 +12,14 @@ var (
 	name     *string
 )
 
+func Arg(i int) string {
+	return flag.Arg(i)
+}
+
+func NArg() int {
+	return flag.NArg()
+}
+
 func addCommonFlags() {
 	generate = flag.Bool("generate", false, "Generating default config")
 	name = flag.String("config", "config.json", "Config name")
