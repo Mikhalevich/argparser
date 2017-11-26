@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"io/ioutil"
 	"os"
 )
 
@@ -48,12 +47,8 @@ func parseConfig(config interface{}) (interface{}, error) {
 	}
 	defer file.Close()
 
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(bytes, config)
+	dec := json.NewDecoder(file)
+	err = dec.Decode(config)
 	if err != nil {
 		return nil, err
 	}
