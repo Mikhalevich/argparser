@@ -69,6 +69,7 @@ func generateConfig(config interface{}) error {
 	defer file.Close()
 
 	enc := json.NewEncoder(file)
+	enc.SetIndent("", "    ")
 	return enc.Encode(config)
 }
 
