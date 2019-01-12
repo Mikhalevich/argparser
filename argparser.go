@@ -10,18 +10,18 @@ import (
 )
 
 type Parser struct {
-	generate       *bool
-	name           *string
-	commands       []string
-	CurrentCommand string
+	generate *bool
+	name     *string
+	commands map[string]string
+	command  string
 }
 
 func NewParser() *Parser {
 	return &Parser{
-		generate:       nil,
-		name:           nil,
-		commands:       make([]string, 0),
-		CurrentCommand: "",
+		generate: nil,
+		name:     nil,
+		commands: make(map[string]string),
+		command:  "",
 	}
 }
 
@@ -86,8 +86,12 @@ func (p *Parser) generateConfig(config interface{}) error {
 	return enc.Encode(config)
 }
 
-func (p *Parser) AddCommands(commands []string) {
+func (p *Parser) AddCommands(commands map[string]string) {
 	p.commands = commands
+}
+
+func (p *Parser) Command() string {
+	return p.command
 }
 
 func (p *Parser) isCommandsValid() bool {
@@ -103,15 +107,18 @@ func (p *Parser) getCurrentCommand() error {
 		return errors.New("No command specified")
 	}
 
-	p.CurrentCommand = p.Arg(0)
+	p.command = p.Arg(0)
 
-	for _, c := range p.commands {
-		if c == p.CurrentCommand {
+	cmds := make([]string, 0, len(p.commands))
+	for c, _ := range p.commands {
+		if c == p.command {
 			return nil
 		}
+
+		cmds = append(cmds, c)
 	}
 
-	return fmt.Errorf("Invalid command was specified %s. Available commands: %s", p.CurrentCommand, strings.Join(p.commands, ", "))
+	return fmt.Errorf("Invalid command was specified %s. Available commands: %s", p.command, strings.Join(cmds, ", "))
 }
 
 func (p *Parser) Arguments() []string {
@@ -130,6 +137,21 @@ func (p *Parser) Arguments() []string {
 
 func (p *Parser) Parse(config interface{}) (interface{}, error, bool) {
 	p.addCommonFlags()
+
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+
+		if p.isCommandsValid() {
+			fmt.Println("\nCommands:")
+			for command, description := range p.commands {
+				fmt.Printf("  %s - %s\n", command, description)
+			}
+		}
+
+		fmt.Println("\nFlags:")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
 	if *p.generate {
